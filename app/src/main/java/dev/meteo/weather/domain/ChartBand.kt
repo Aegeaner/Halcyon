@@ -45,9 +45,12 @@ data class ChartBand(
         /**
          * Scaled from zero, for bars: a dry, still series keeps the baseline at zero so the bars
          * stay flat on it rather than floating mid-band.
+         *
+         * [scale] holds the values that set the top of the band when they are not the ones drawn -
+         * gusts sharing the wind band. It defaults to the drawn series.
          */
-        fun zeroBased(values: List<Double?>): ChartBand {
-            val highest = values.filterNotNull().maxOrNull() ?: 0.0
+        fun zeroBased(values: List<Double?>, scale: List<Double?> = values): ChartBand {
+            val highest = scale.filterNotNull().maxOrNull() ?: 0.0
             return ChartBand(0.0, if (highest > 0.0) highest else 1.0, values)
         }
 

@@ -29,6 +29,15 @@ class ChartBandTest {
     }
 
     @Test
+    fun `scales a series to a companion that is not drawn`() {
+        val band = ChartBand.zeroBased(listOf(2.0, 8.0), scale = listOf(2.0, 8.0, 50.0))
+
+        assertEquals(listOf(2.0, 8.0), band.points)
+        assertEquals(50.0, band.max, 1e-9)
+        assertEquals(0.16f, band.fraction(8.0)!!, 1e-6f)
+    }
+
+    @Test
     fun `centres a flat band instead of dividing by zero`() {
         val band = ChartBand.ranged(listOf(12.0, 12.0, 12.0))
 

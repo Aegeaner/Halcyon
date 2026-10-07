@@ -80,7 +80,7 @@ fun HourlyChart(hours: List<Hour>, modifier: Modifier = Modifier) {
     val precipitation = HourlyChartData.precipitation(hours)
     val probability = HourlyChartData.precipitationProbability(hours)
     val wind = HourlyChartData.windWithGusts(hours)
-    val gusts = wind.copy(points = HourlyChartData.gusts(hours, wind))
+    val gusts = wind.copy(points = HourlyChartData.gusts(hours))
     val humidity = HourlyChartData.humidity(hours)
 
     val totalHeight = BAND_HEIGHTS.fold(AXIS_HEIGHT) { sum, band -> sum + band + BAND_GAP }

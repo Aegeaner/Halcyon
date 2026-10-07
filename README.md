@@ -42,7 +42,7 @@ standalone `sdkmanager` both work; no root access is needed.
 ```bash
 ./gradlew :app:assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew :app:assembleRelease        # app/build/outputs/apk/release/app-release.apk
-./gradlew :app:testDebugUnitTest      # 74 unit tests, no device required
+./gradlew :app:testDebugUnitTest      # 77 unit tests, no device required
 ```
 
 Release builds are minified with R8. Signing reads `keystore.properties` (never committed, see
@@ -143,7 +143,7 @@ returns it, which the 9 km IFS model never does. Fields the TUI fetched but neve
 
 ## Tests
 
-`./gradlew :app:testDebugUnitTest` — 74 tests in 13 classes, fully offline.
+`./gradlew :app:testDebugUnitTest` — 77 tests in 14 classes, fully offline.
 
 Behaviour covered: payload parsing and its tolerance paths (missing, short, non-numeric, boolean,
 numeric-string and null columns, unparsable timestamps), the request query and its clamping, error
