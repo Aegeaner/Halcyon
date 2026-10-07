@@ -14,6 +14,10 @@ class SettingsStore(context: Context) {
         get() = prefs.getString(KEY_MODEL, null) ?: DEFAULT_MODEL
         set(value) = prefs.edit { putString(KEY_MODEL, value) }
 
+    var refreshInterval: RefreshInterval
+        get() = RefreshInterval.fromSeconds(prefs.getInt(KEY_REFRESH_SECONDS, Int.MIN_VALUE))
+        set(value) = prefs.edit { putInt(KEY_REFRESH_SECONDS, value.seconds) }
+
     /**
      * Last place used; Oslo before anything is stored.
      * A place that came from a device fix is labelled `lat, lon` exactly like `--lat/--lon`.
@@ -51,6 +55,7 @@ class SettingsStore(context: Context) {
 
     private companion object {
         const val KEY_MODEL = "model"
+        const val KEY_REFRESH_SECONDS = "refresh.seconds"
         const val KEY_NAME = "place.name"
         const val KEY_LATITUDE = "place.latitude"
         const val KEY_LONGITUDE = "place.longitude"

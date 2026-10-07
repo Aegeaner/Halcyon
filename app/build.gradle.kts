@@ -25,9 +25,9 @@ android {
         applicationId = "dev.meteo.weather"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         // CI passes the tag, e.g. -PversionName=0.1.1, so the APK matches its release.
-        versionName = (findProperty("versionName") as String?) ?: "0.1.0"
+        versionName = (findProperty("versionName") as String?) ?: "0.2.0"
     }
 
     signingConfigs {

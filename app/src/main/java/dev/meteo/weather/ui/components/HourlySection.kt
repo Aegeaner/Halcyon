@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,20 +26,25 @@ import dev.meteo.weather.domain.HourlyPages
 import dev.meteo.weather.domain.Si
 import dev.meteo.weather.domain.Wmo
 
-/** Section title plus the three 24-hour pages (`1–24 h`, `25–48 h`, `49–72 h`). */
+/** Section title, a link to the table behind the chart, and the three 24-hour pages. */
 @Composable
 fun HourlyHeader(
     selectedPage: Int,
     shownHours: Int,
     onPageSelected: (Int) -> Unit,
+    onOpenDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.hourly_range, shownHours),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.hourly_range, shownHours),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onOpenDetails) { Text(stringResource(R.string.details)) }
+        }
         PrimaryTabRow(selectedTabIndex = selectedPage) {
             HourlyPages.labels.forEachIndexed { index, label ->
                 Tab(

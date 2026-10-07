@@ -1,6 +1,7 @@
 package dev.meteo.weather.ui
 
 import dev.meteo.weather.data.DEFAULT_MODEL
+import dev.meteo.weather.data.RefreshInterval
 import dev.meteo.weather.data.model.OSLO
 import dev.meteo.weather.data.model.Forecast
 import dev.meteo.weather.data.model.Place
@@ -15,12 +16,15 @@ enum class CoordinateError {
 data class UiState(
     val place: Place = OSLO,
     val model: String = DEFAULT_MODEL,
+    val refreshInterval: RefreshInterval = RefreshInterval.DEFAULT,
     val forecast: Forecast? = null,
     val loading: Boolean = false,
     val locating: Boolean = false,
     /** True when the selected place came from a device fix rather than a search. */
     val fromDeviceLocation: Boolean = false,
     val notice: Notice? = null,
+    /** Page whose hourly table is open, or null for the forecast overview. */
+    val detailsPage: Int? = null,
     /** True when the app should open the settings sheet, e.g. to offer the manual fallback. */
     val openSettings: Boolean = false,
     val error: String? = null,

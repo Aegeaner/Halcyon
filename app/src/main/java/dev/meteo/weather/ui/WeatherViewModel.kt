@@ -7,12 +7,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.meteo.weather.data.ForecastRepository
+import dev.meteo.weather.data.RefreshInterval
 import dev.meteo.weather.data.SettingsStore
 import dev.meteo.weather.data.model.Place
 import dev.meteo.weather.data.responseCache
 import dev.meteo.weather.domain.CoordinateInput
 import dev.meteo.weather.domain.CoordinateParse
 import dev.meteo.weather.domain.Fmt
+import dev.meteo.weather.domain.HourlyPages
 import dev.meteo.weather.location.LocationProvider
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +51,7 @@ class WeatherViewModel(
         UiState(
             place = settings.place,
             model = settings.model,
+            refreshInterval = settings.refreshInterval,
             fromDeviceLocation = settings.placeIsDeviceLocation,
         ),
     )
@@ -158,6 +161,17 @@ class WeatherViewModel(
         if (_state.value.openSettings) _state.update { it.copy(openSettings = false) }
     }
 
+    // --------------------------------------------------------------- details -- //
+
+    /** Opens the hourly table of [page]; the chart on that page links here. */
+    fun openDetails(page: Int) {
+        _state.update { it.copy(detailsPage = page.coerceIn(0, HourlyPages.PAGE_COUNT - 1)) }
+    }
+
+    fun closeDetails() {
+        if (_state.value.detailsPage != null) _state.update { it.copy(detailsPage = null) }
+    }
+
     // ---------------------------------------------------------------- places -- //
 
     fun onSearchQueryChanged(query: String) {
@@ -251,6 +265,13 @@ class WeatherViewModel(
         settings.model = model
         _state.update { it.copy(model = model) }
         load(force = false)
+    }
+
+    /** Timer interval while the screen is visible; no immediate request, the timer restarts. */
+    fun setRefreshInterval(interval: RefreshInterval) {
+        if (interval == _state.value.refreshInterval) return
+        settings.refreshInterval = interval
+        _state.update { it.copy(refreshInterval = interval) }
     }
 
     companion object {

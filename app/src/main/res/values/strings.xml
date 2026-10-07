@@ -9,7 +9,19 @@
     <string name="now">Now</string>
     <string name="loading">Loading forecast …</string>
     <string name="locating">Locating …</string>
+    <string name="hourly_title">Hourly</string>
     <string name="hourly_range">Hourly — next %1$d h</string>
+    <string name="details">Details</string>
+    <string name="back">Back</string>
+    <string name="open_chart_details">Open the hourly table for %1$s</string>
+    <string name="chart_temperature">Temperature</string>
+    <string name="chart_precipitation">Precipitation</string>
+    <string name="chart_wind">Wind</string>
+    <string name="chart_probability">Probability</string>
+    <string name="chart_gusts">Gusts</string>
+    <string name="chart_humidity">Humidity</string>
+    <string name="chart_peak">peak %1$s</string>
+    <string name="chart_no_precipitation">no precipitation</string>
     <string name="daily_range">Daily — %1$d days</string>
     <string name="attribution">Data © ECMWF / Open-Meteo, CC-BY 4.0 · ECMWF IFS HRES (9 km, native)</string>
 

@@ -12,9 +12,10 @@ affiliated with Open-Meteo.
 ## Screenshots
 
 <p>
-  <img src="shots/01-main.png" width="240" alt="Current conditions, three 24-hour hourly pages and the daily list">
-  <img src="shots/02-fallback.png" width="240" alt="Fallback panel with city search and manual coordinate entry">
-  <img src="shots/03-search.png" width="240" alt="City search results showing the coordinates the public API returns">
+  <img src="shots/01-main.png" width="190" alt="Current conditions, the hourly chart and the daily list">
+  <img src="shots/02-hourly-details.png" width="190" alt="Hourly detail table for one 24-hour page">
+  <img src="shots/03-fallback.png" width="190" alt="Fallback panel with city search and manual coordinate entry">
+  <img src="shots/04-search.png" width="190" alt="City search results showing the coordinates the public API returns">
 </p>
 
 ## What it shows
@@ -25,7 +26,7 @@ affiliated with Open-Meteo.
 * **Current conditions** for that position: temperature, apparent temperature, weather,
   wind and gusts, humidity, dew point, cloud cover, pressure, precipitation and probability,
   visibility, sunrise and sunset.
-* **Hourly**: the next 72 h as three pages of 24 h (`1–24 h`, `25–48 h`, `49–72 h`).
+* **Hourly**: a chart for each of the next three 24-hour spans (`1–24 h`, `25–48 h`, `49–72 h`) — temperature, precipitation, wind and humidity on one shared time axis, with the table behind each chart one tap away.
 * **Daily**: the next 16 days.
 * SI units only — °C, km/h, mm, km — refreshed every 900 s while the screen is visible, with an
   on-disk response cache (1 h TTL).
@@ -39,7 +40,7 @@ standalone `sdkmanager` both work; no root access is needed.
 ```bash
 ./gradlew :app:assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew :app:assembleRelease        # app/build/outputs/apk/release/app-release.apk
-./gradlew :app:testDebugUnitTest      # 61 unit tests, no device required
+./gradlew :app:testDebugUnitTest      # 68 unit tests, no device required
 ```
 
 Release builds are minified with R8. Signing reads `keystore.properties` (never committed, see
@@ -120,13 +121,13 @@ coordinates rounded to six decimals, the same 17 hourly and 17 daily variables.
 | `--city NAME` | in-app search, same geocoding API; results show the coordinates it returns |
 | default Dublin | Oslo, when there is no fix and no saved place |
 | `--days 1..16` | fixed 16 days; the hourly section covers the first 72 h |
-| `--hourly-rows 24` | three pages of 24 h |
+| `--hourly-rows 24` | three charted pages of 24 h |
 | `--units` / `u` | dropped: SI only, so there is no unit-system abstraction |
 | `--refresh 900` / `r` | 900 s timer while visible, plus an explicit refresh |
 | `--cache-ttl 3600` / `--no-cache` | 1 h TTL; a refresh bypasses it on read |
 | `q` | system back gesture |
 | Now panel | `Now` card, field for field |
-| hourly table | three hourly pages, two lines per row |
+| hourly table | a chart per page; the table is the details screen behind it |
 | daily table | 16 daily rows, two lines each |
 
 Deliberate differences beyond units: the tables are two-line rows rather than 9-column tables,
@@ -138,13 +139,14 @@ returns it, which the 9 km IFS model never does. Fields the TUI fetched but neve
 
 ## Tests
 
-`./gradlew :app:testDebugUnitTest` — 61 tests in 11 classes, fully offline.
+`./gradlew :app:testDebugUnitTest` — 68 tests in 12 classes, fully offline.
 
 Behaviour covered: payload parsing and its tolerance paths (missing, short, non-numeric, boolean,
 numeric-string and null columns, unparsable timestamps), the request query and its clamping, error
 payload and HTTP failure handling, response caching with its TTL and key derivation, number and
 date formatting, WMO codes and the compass, hourly paging boundaries, SI conversion and the UI
-state's place matching, and manual coordinate entry with its boundaries. HTTP behaviour runs
+state's place matching, manual coordinate entry with its boundaries, and the chart band scaling.
+HTTP behaviour runs
 against a local `com.sun.net.httpserver` instance: no mock-server dependency, no network.
 
 ## Licence

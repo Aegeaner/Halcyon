@@ -4,11 +4,14 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,8 +53,10 @@ import dev.meteo.weather.location.hasLocationPermission
 import dev.meteo.weather.ui.components.CurrentCard
 import dev.meteo.weather.ui.components.DailyHeader
 import dev.meteo.weather.ui.components.DailyRow
+import dev.meteo.weather.ui.components.HourlyChart
+import dev.meteo.weather.ui.components.HourlyChartLegend
+import dev.meteo.weather.ui.components.HourlyDetailsScreen
 import dev.meteo.weather.ui.components.HourlyHeader
-import dev.meteo.weather.ui.components.HourlyRow
 import dev.meteo.weather.ui.components.SettingsDialog
 import dev.meteo.weather.ui.components.StatusCard
 import kotlinx.coroutines.delay
@@ -117,8 +122,19 @@ fun WeatherScreen(
     // Derived once per composition, in a composable context: `LazyListScope` is not one, so this
     // cannot live inside the list body, and one anchor keeps the three pages consistent per paint.
     val forecast = state.visibleForecast
+    val detailsPage = state.detailsPage
     val hours = forecast?.let { HourlyPages.page(it, HourlyPages.anchor(it), hourlyPage) }.orEmpty()
     val showUv = forecast?.days?.any { it.uvIndexMax != null } == true
+
+    if (detailsPage != null && forecast != null) {
+        BackHandler(onBack = viewModel::closeDetails)
+        HourlyDetailsScreen(
+            hours = HourlyPages.page(forecast, HourlyPages.anchor(forecast), detailsPage),
+            rangeLabel = HourlyPages.label(detailsPage),
+            onBack = viewModel::closeDetails,
+        )
+        return
+    }
 
     Scaffold(
         modifier = modifier,
@@ -159,10 +175,24 @@ fun WeatherScreen(
                     selectedPage = hourlyPage,
                     shownHours = hours.size,
                     onPageSelected = { hourlyPage = it },
+                    onOpenDetails = { viewModel.openDetails(hourlyPage) },
                 )
             }
-            items(items = hours, key = { "hour-${it.time}" }) { hour ->
-                HourlyRow(hour = hour)
+            if (hours.isNotEmpty()) {
+                item(key = "hourly-chart") {
+                    Column(
+                        modifier = Modifier.clickable(
+                            onClickLabel = stringResource(
+                                R.string.open_chart_details,
+                                HourlyPages.label(hourlyPage),
+                            ),
+                            onClick = { viewModel.openDetails(hourlyPage) },
+                        ),
+                    ) {
+                        HourlyChartLegend(modifier = Modifier.padding(bottom = 6.dp))
+                        HourlyChart(hours = hours)
+                    }
+                }
             }
 
             item(key = "daily-header") { DailyHeader(dayCount = forecast.days.size) }
