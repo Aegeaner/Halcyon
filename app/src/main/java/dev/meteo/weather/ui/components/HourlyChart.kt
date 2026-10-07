@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,17 +42,21 @@ private object ChartColours {
     val humidity = Color(0xFF9AA7B0)
 }
 
-private val BAND_HEIGHTS = listOf(96.dp, 58.dp, 74.dp, 46.dp)
+private val BAND_HEIGHTS = listOf(96.dp, 64.dp, 76.dp, 54.dp)
+private val BAND_GAP = 18.dp
+private val AXIS_HEIGHT = 18.dp
 private val CAPTION_STRIP = 15.dp
 
 /** The probability bars sit behind the amount bars, faint enough not to compete. */
 private const val PROBABILITY_ALPHA = 0.16f
-private val BAND_GAP = 16.dp
-private val AXIS_HEIGHT = 18.dp
 
 /**
  * Meteogram for one page of hours: temperature, precipitation, wind and humidity bands sharing one
- * x axis, so the series can be read against each other at a glance.
+ * x axis.
+ *
+ * Every series labels its own extremes with real values - the highest and lowest reading, the
+ * tallest bar, the strongest wind and gust, the dampest and driest hour - so the bands can be read
+ * without the table, which stays one tap away for exact figures.
  */
 @Composable
 fun HourlyChart(hours: List<Hour>, modifier: Modifier = Modifier) {
@@ -65,58 +68,89 @@ fun HourlyChart(hours: List<Hour>, modifier: Modifier = Modifier) {
     val labelStyle = TextStyle(fontSize = 9.sp, color = axis)
     val captionStyle = TextStyle(fontSize = 10.sp, color = axis)
 
-    val captions = listOf(
-        "${stringResource(R.string.chart_temperature)} \u00b0C",
-        "${stringResource(R.string.chart_precipitation)} mm",
-        "${stringResource(R.string.chart_wind)} km/h",
-        "${stringResource(R.string.chart_humidity)} %",
-    )
+    val captionTemperature = "${stringResource(R.string.chart_temperature)} \u00b0C"
+    val captionPrecipitation = "${stringResource(R.string.chart_precipitation)} mm / " +
+        "${stringResource(R.string.chart_probability)} %"
+    val captionWind = "${stringResource(R.string.chart_wind)} km/h"
+    val captionHumidity = "${stringResource(R.string.chart_humidity)} %"
     val noPrecipitation = stringResource(R.string.chart_no_precipitation)
-    val peak = stringResource(R.string.chart_peak)
+    val percent = stringResource(R.string.chart_percent)
 
     val temperature = HourlyChartData.temperature(hours)
     val precipitation = HourlyChartData.precipitation(hours)
     val probability = HourlyChartData.precipitationProbability(hours)
     val wind = HourlyChartData.windWithGusts(hours)
-    val gustBand = wind.copy(points = HourlyChartData.gusts(hours, wind))
+    val gusts = wind.copy(points = HourlyChartData.gusts(hours, wind))
     val humidity = HourlyChartData.humidity(hours)
 
     val totalHeight = BAND_HEIGHTS.fold(AXIS_HEIGHT) { sum, band -> sum + band + BAND_GAP }
 
     Canvas(modifier = modifier.fillMaxWidth().height(totalHeight)) {
         val step = size.width / hours.size
-        var bandTop = 0f
         val strip = CAPTION_STRIP.toPx()
+        var bandTop = 0f
+
         BAND_HEIGHTS.forEachIndexed { index, height ->
             val bandHeight = height.toPx()
-            val plotTop = bandTop + strip
-            val plotHeight = bandHeight - strip
+            val frame = Frame(bandTop, bandTop + strip, bandHeight - strip, step, measurer, labelStyle)
             when (index) {
-                0 -> drawTemperatureBand(bandTop, plotTop, plotHeight, temperature, step, measurer, captions[0], captionStyle, labelStyle, grid)
-                1 -> drawPrecipitationBand(bandTop, plotTop, plotHeight, precipitation, probability, step, measurer, captions[1], captionStyle, labelStyle, grid, noPrecipitation)
-                2 -> drawWindBand(bandTop, plotTop, plotHeight, wind, gustBand, step, measurer, captions[2], captionStyle, labelStyle, grid, peak)
-                3 -> drawHumidityBand(bandTop, plotTop, plotHeight, humidity, step, measurer, captions[3], captionStyle, labelStyle, grid)
+                0 -> drawTemperatureBand(frame, captionTemperature, captionStyle, temperature)
+                1 -> drawPrecipitationBand(
+                    frame,
+                    captionPrecipitation,
+                    captionStyle,
+                    precipitation,
+                    probability,
+                    noPrecipitation,
+                    percent,
+                )
+
+                2 -> drawWindBand(frame, captionWind, captionStyle, wind, gusts)
+                3 -> drawHumidityBand(frame, captionHumidity, captionStyle, humidity, percent)
             }
             bandTop += bandHeight + BAND_GAP.toPx()
         }
-        val top = bandTop - BAND_GAP.toPx()
-        drawAxis(top, hours, step, measurer, labelStyle, grid)
+        val axisTop = bandTop - BAND_GAP.toPx()
+        drawLine(grid, Offset(0f, axisTop), Offset(size.width, axisTop), strokeWidth = 1f)
+        drawHourAxis(axisTop, hours, step, measurer, labelStyle, grid)
     }
 }
 
-/** Horizontal line at the top of a band plus its caption, drawn for every band. */
+/** Where one band lives on the canvas, plus what every band needs to draw into it. */
+private data class Frame(
+    val bandTop: Float,
+    val plotTop: Float,
+    val plotHeight: Float,
+    val step: Float,
+    val measurer: TextMeasurer,
+    val labelStyle: TextStyle,
+) {
+    fun x(index: Int): Float = step / 2f + index * step
+    fun y(fraction: Float): Float = plotTop + plotHeight - fraction * plotHeight
+    val baseline: Float get() = plotTop + plotHeight
+}
+
 private fun DrawScope.drawBandFrame(
-    top: Float,
+    frame: Frame,
     caption: String,
     captionStyle: TextStyle,
     grid: Color,
-    measurer: TextMeasurer,
 ) {
-    drawLine(grid, Offset(0f, top), Offset(size.width, top), strokeWidth = 1f)
-    drawText(textMeasurer = measurer, text = caption, style = captionStyle, topLeft = Offset(2f, top + 2f))
+    drawLine(grid, Offset(0f, frame.plotTop), Offset(size.width, frame.plotTop), strokeWidth = 1f)
+    drawText(
+        textMeasurer = frame.measurer,
+        text = caption,
+        style = captionStyle,
+        topLeft = Offset(2f, frame.bandTop + 2f),
+    )
 }
 
-private fun DrawScope.valuePath(band: ChartBand, top: Float, height: Float, step: Float): Path {
+/** The zero line of a bar or speed band, so heights can be read against it. */
+private fun DrawScope.drawBaseline(frame: Frame, grid: Color) {
+    drawLine(grid, Offset(0f, frame.baseline), Offset(size.width, frame.baseline), strokeWidth = 1.5f)
+}
+
+private fun bandPath(band: ChartBand, frame: Frame): Path {
     val path = Path()
     var started = false
     band.points.forEachIndexed { index, value ->
@@ -125,151 +159,184 @@ private fun DrawScope.valuePath(band: ChartBand, top: Float, height: Float, step
             started = false
             return@forEachIndexed
         }
-        val x = step / 2f + index * step
-        val y = top + height - fraction * height
+        val x = frame.x(index)
+        val y = frame.y(fraction)
         if (started) path.lineTo(x, y) else path.moveTo(x, y)
         started = true
     }
     return path
 }
 
-private fun DrawScope.label(measurer: TextMeasurer, text: String, style: TextStyle, x: Float, y: Float) {
-    val measured = measurer.measure(text, style)
+/** A dot on the series plus its value, kept inside the band. */
+private fun DrawScope.labelPoint(
+    frame: Frame,
+    index: Int,
+    fraction: Float,
+    text: String,
+    colour: Color = frame.labelStyle.color,
+) {
+    val x = frame.x(index)
+    val y = frame.y(fraction)
+    drawCircle(colour, radius = 3f, center = Offset(x, y))
+    val measured = frame.measurer.measure(text, frame.labelStyle)
+    val labelX = (x - measured.size.width / 2f)
+        .coerceIn(0f, (size.width - measured.size.width).coerceAtLeast(0f))
+    val above = y - measured.size.height - 5f
+    val labelY = if (above >= frame.plotTop) above else y + 6f
     drawText(
-        textMeasurer = measurer,
+        textMeasurer = frame.measurer,
+        text = text,
+        style = frame.labelStyle,
+        topLeft = Offset(labelX, labelY),
+    )
+}
+
+/** Labels the extremes of a series, if it has any. */
+private fun DrawScope.labelExtremes(frame: Frame, band: ChartBand, colour: Color) {
+    for (index in listOfNotNull(band.peakIndex(), band.troughIndex())) {
+        val value = band.points.getOrNull(index) ?: continue
+        val fraction = band.fraction(value) ?: continue
+        labelPoint(frame, index, fraction, Fmt.num(value), colour)
+    }
+}
+
+/** A fixed scale pinned to the band's top-right, for a series whose ceiling is not a data point. */
+private fun DrawScope.labelCeiling(frame: Frame, text: String, colour: Color) {
+    val style = frame.labelStyle.copy(color = colour)
+    val measured = frame.measurer.measure(text, style)
+    drawText(
+        textMeasurer = frame.measurer,
         text = text,
         style = style,
         topLeft = Offset(
-            x = x.coerceIn(0f, (size.width - measured.size.width).coerceAtLeast(0f)),
-            y = y.coerceIn(0f, (size.height - measured.size.height).coerceAtLeast(0f)),
+            x = size.width - measured.size.width - 3f,
+            y = frame.plotTop - measured.size.height / 2f,
         ),
     )
 }
 
 private fun DrawScope.drawTemperatureBand(
-    bandTop: Float,
-    top: Float,
-    height: Float,
-    band: ChartBand,
-    step: Float,
-    measurer: TextMeasurer,
+    frame: Frame,
     caption: String,
     captionStyle: TextStyle,
-    labelStyle: TextStyle,
-    grid: Color,
+    band: ChartBand,
 ) {
-    drawBandFrame(bandTop, caption, captionStyle, grid, measurer)
-    drawPath(valuePath(band, top, height, step), ChartColours.temperature, style = Stroke(width = 2.5f))
-
-    val present = band.points.filterNotNull()
-    if (present.isEmpty()) return
-    for (value in listOf(present.max(), present.min()).distinct()) {
-        val index = band.points.indexOfFirst { it == value }
-        val fraction = band.fraction(value) ?: continue
-        if (index < 0) continue
-        val x = step / 2f + index * step
-        val y = top + height - fraction * height
-        drawCircle(ChartColours.temperature, radius = 3f, center = Offset(x, y))
-        label(measurer, Fmt.num(value), labelStyle, x - 6f, (y - 12f).coerceAtLeast(top))
-    }
+    drawBandFrame(frame, caption, captionStyle, ChartColours.temperature.copy(alpha = 0.25f))
+    drawPath(bandPath(band, frame), ChartColours.temperature, style = Stroke(width = 2.5f))
+    labelExtremes(frame, band, ChartColours.temperature)
 }
 
 private fun DrawScope.drawPrecipitationBand(
-    bandTop: Float,
-    top: Float,
-    height: Float,
-    band: ChartBand,
-    probability: ChartBand,
-    step: Float,
-    measurer: TextMeasurer,
+    frame: Frame,
     caption: String,
     captionStyle: TextStyle,
-    labelStyle: TextStyle,
-    grid: Color,
+    amounts: ChartBand,
+    probability: ChartBand,
     noPrecipitation: String,
+    percent: String,
 ) {
-    drawBandFrame(bandTop, caption, captionStyle, grid, measurer)
-    val barWidth = (step * 0.55f).coerceAtLeast(2f)
-    band.points.forEachIndexed { index, value ->
-        val x = 2f + index * step
+    val grid = ChartColours.precipitation.copy(alpha = 0.25f)
+    drawBandFrame(frame, caption, captionStyle, grid)
+    drawBaseline(frame, grid)
+
+    val barWidth = (frame.step * 0.55f).coerceAtLeast(2f)
+    amounts.points.forEachIndexed { index, value ->
+        val x = 2f + index * frame.step
         probability.fraction(probability.points.getOrNull(index))?.let { fraction ->
+            val height = frame.baseline - frame.y(fraction)
             drawRect(
                 color = ChartColours.precipitation.copy(alpha = PROBABILITY_ALPHA),
-                topLeft = Offset(x, top + height - fraction * height),
-                size = Size(barWidth, fraction * height),
+                topLeft = Offset(x, frame.baseline - height),
+                size = Size(barWidth, height),
             )
         }
-        band.fraction(value)?.let { fraction ->
+        amounts.fraction(value)?.let { fraction ->
+            val height = frame.baseline - frame.y(fraction)
             drawRect(
                 color = ChartColours.precipitation,
-                topLeft = Offset(x, top + height - fraction * height),
-                size = Size(barWidth, fraction * height),
+                topLeft = Offset(x, frame.baseline - height),
+                size = Size(barWidth, height),
             )
         }
     }
-    if (band.points.filterNotNull().sum() <= 0.0) {
-        label(measurer, noPrecipitation, labelStyle, 2f, top + height - 14f)
+
+    if (amounts.points.filterNotNull().sum() <= 0.0) {
+        drawText(
+            textMeasurer = frame.measurer,
+            text = noPrecipitation,
+            style = frame.labelStyle,
+            topLeft = Offset(2f, frame.plotTop + 2f),
+        )
+    } else {
+        amounts.peakIndex()?.let { index ->
+            val value = amounts.points.getOrNull(index) ?: return@let
+            val fraction = amounts.fraction(value) ?: return@let
+            labelPoint(frame, index, fraction, Fmt.num(value), ChartColours.precipitation)
+        }
+    }
+
+    // Probability is always scaled 0..100, so its ceiling is a scale label, and the series carries
+    // its own maximum next to it.
+    labelCeiling(frame, percent.format(Fmt.int(100.0)), ChartColours.precipitation.copy(alpha = 0.55f))
+    probability.peakIndex()?.let { index ->
+        val value = probability.points.getOrNull(index) ?: return@let
+        if (value >= 100.0) return@let
+        val fraction = probability.fraction(value) ?: return@let
+        labelPoint(frame, index, fraction, percent.format(Fmt.int(value)), ChartColours.precipitation.copy(alpha = 0.7f))
     }
 }
 
 private fun DrawScope.drawWindBand(
-    bandTop: Float,
-    top: Float,
-    height: Float,
-    band: ChartBand,
-    gustBand: ChartBand,
-    step: Float,
-    measurer: TextMeasurer,
+    frame: Frame,
     caption: String,
     captionStyle: TextStyle,
-    labelStyle: TextStyle,
-    grid: Color,
-    peakLabel: String,
+    wind: ChartBand,
+    gusts: ChartBand,
 ) {
-    drawBandFrame(bandTop, caption, captionStyle, grid, measurer)
-    val dashed = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f)))
-    drawPath(valuePath(gustBand, top, height, step), ChartColours.wind.copy(alpha = 0.45f), style = dashed)
-    drawPath(valuePath(band, top, height, step), ChartColours.wind, style = Stroke(width = 2.5f))
+    val grid = ChartColours.wind.copy(alpha = 0.25f)
+    drawBandFrame(frame, caption, captionStyle, grid)
+    drawBaseline(frame, grid)
 
-    val peak = band.points.filterNotNull().maxOrNull() ?: return
-    val measured = measurer.measure(peakLabel.format(Fmt.int(peak)), labelStyle)
-    label(measurer, peakLabel.format(Fmt.int(peak)), labelStyle, size.width - measured.size.width - 2f, top + height - 14f)
+    drawPath(
+        path = bandPath(gusts, frame),
+        color = ChartColours.wind.copy(alpha = 0.45f),
+        style = Stroke(width = 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f))),
+    )
+    drawPath(bandPath(wind, frame), ChartColours.wind, style = Stroke(width = 2.5f))
+
+    // The dashed series is unreadable without its own figure, so both maxima are labelled.
+    gusts.peakIndex()?.let { index ->
+        val value = gusts.points.getOrNull(index) ?: return@let
+        val fraction = gusts.fraction(value) ?: return@let
+        labelPoint(frame, index, fraction, Fmt.num(value), ChartColours.wind.copy(alpha = 0.6f))
+    }
+    wind.peakIndex()?.let { index ->
+        val value = wind.points.getOrNull(index) ?: return@let
+        val fraction = wind.fraction(value) ?: return@let
+        labelPoint(frame, index, fraction, Fmt.num(value), ChartColours.wind)
+    }
 }
 
 private fun DrawScope.drawHumidityBand(
-    bandTop: Float,
-    top: Float,
-    height: Float,
-    band: ChartBand,
-    step: Float,
-    measurer: TextMeasurer,
+    frame: Frame,
     caption: String,
     captionStyle: TextStyle,
-    labelStyle: TextStyle,
-    grid: Color,
+    band: ChartBand,
+    percent: String,
 ) {
-    drawBandFrame(bandTop, caption, captionStyle, grid, measurer)
-    val inset = height * 0.30f
-    val path = Path()
-    var started = false
-    band.points.forEachIndexed { index, value ->
-        val fraction = band.fraction(value)
-        if (fraction == null) {
-            started = false
-            return@forEachIndexed
-        }
-        val x = step / 2f + index * step
-        val y = top + height - inset - fraction * (height - inset)
-        if (started) path.lineTo(x, y) else path.moveTo(x, y)
-        started = true
+    val grid = ChartColours.humidity.copy(alpha = 0.3f)
+    drawBandFrame(frame, caption, captionStyle, grid)
+    drawPath(bandPath(band, frame), ChartColours.humidity, style = Stroke(width = 2f))
+
+    for (index in listOfNotNull(band.peakIndex(), band.troughIndex())) {
+        val value = band.points.getOrNull(index) ?: continue
+        val fraction = band.fraction(value) ?: continue
+        labelPoint(frame, index, fraction, percent.format(Fmt.int(value)), ChartColours.humidity)
     }
-    drawPath(path, ChartColours.humidity, style = Stroke(width = 1.5f))
-    label(measurer, "0", labelStyle, size.width - 14f, top + height - 12f)
-    label(measurer, "100", labelStyle, size.width - 20f, top + 2f)
 }
 
 /** Hour ticks every six hours, plus the weekday where a day begins. */
-private fun DrawScope.drawAxis(
+private fun DrawScope.drawHourAxis(
     top: Float,
     hours: List<Hour>,
     step: Float,
@@ -277,27 +344,29 @@ private fun DrawScope.drawAxis(
     labelStyle: TextStyle,
     grid: Color,
 ) {
-    drawLine(grid, Offset(0f, top), Offset(size.width, top), strokeWidth = 1f)
     hours.forEachIndexed { index, hour ->
         val x = step / 2f + index * step
-        if (hour.time.hour == 0) {
-            drawLine(grid, Offset(x, 0f), Offset(x, top), strokeWidth = 1f)
-        }
+        if (hour.time.hour == 0) drawLine(grid, Offset(x, 0f), Offset(x, top), strokeWidth = 1f)
         val text = when {
             hour.time.hour == 0 -> hour.time.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale.ENGLISH)
-            hour.time.hour % 6 == 0 -> "%02d".format(Locale.ENGLISH, hour.time.hour)
+            hour.time.hour % 3 == 0 -> "%02d".format(Locale.ENGLISH, hour.time.hour)
             else -> null
         } ?: return@forEachIndexed
         val measured = measurer.measure(text, labelStyle)
-        label(measurer, text, labelStyle, x - measured.size.width / 2f, top + 3f)
+        drawText(
+            textMeasurer = measurer,
+            text = text,
+            style = labelStyle,
+            topLeft = Offset((x - measured.size.width / 2f).coerceIn(0f, size.width - measured.size.width), top + 3f),
+        )
     }
 }
 
 private enum class Swatch { LINE, DASHED, BAR, FAINT_BAR }
 
 /**
- * Colour key for the bands. The precipitation band draws two series - amount in mm and the fainter
- * probability in percent - so they are named here rather than left to be guessed.
+ * Colour key for the bands: the precipitation band draws two series - amount in millimetres and the
+ * fainter probability in percent - so they are named here rather than left to be guessed.
  */
 @Composable
 fun HourlyChartLegend(modifier: Modifier = Modifier) {

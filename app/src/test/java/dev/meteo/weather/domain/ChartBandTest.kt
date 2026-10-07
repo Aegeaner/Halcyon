@@ -75,4 +75,28 @@ class ChartBandTest {
         assertEquals(100.0, humidity.max, 1e-9)
         assertEquals(0.8f, humidity.fraction(80.0)!!, 1e-6f)
     }
+
+    @Test
+    fun `finds the extremes and skips the gaps`() {
+        val band = ChartBand.ranged(listOf(null, 4.0, null, 9.0, 1.0))
+
+        assertEquals(3, band.peakIndex())
+        assertEquals(4, band.troughIndex())
+    }
+
+    @Test
+    fun `keeps the earliest of equal extremes`() {
+        val band = ChartBand.ranged(listOf(5.0, 5.0, 2.0, 2.0))
+
+        assertEquals(0, band.peakIndex())
+        assertEquals(2, band.troughIndex())
+    }
+
+    @Test
+    fun `reports no extremes for an empty series`() {
+        val band = ChartBand.ranged(listOf(null, null))
+
+        assertNull(band.peakIndex())
+        assertNull(band.troughIndex())
+    }
 }

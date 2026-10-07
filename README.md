@@ -27,7 +27,7 @@ app stays far below. Independent client, not affiliated with Open-Meteo.
 * **Current conditions** for that position: temperature, apparent temperature, weather,
   wind and gusts, humidity, dew point, cloud cover, pressure, precipitation and probability,
   visibility, sunrise and sunset.
-* **Hourly**: a chart for each of the next three 24-hour spans (`1–24 h`, `25–48 h`, `49–72 h`) — temperature, precipitation, wind and humidity on one shared time axis, with the table behind each chart one tap away.
+* **Hourly**: a chart for each of the next three 24-hour spans (`1–24 h`, `25–48 h`, `49–72 h`) — temperature, precipitation, wind and humidity on one shared time axis, ticking every three hours with each series' extremes labelled; the table behind each chart is one tap away.
 * **Daily**: the next 16 days.
 * **Refresh**: a timer fetches a fresh response every 15 minutes by default — configurable from 15 minutes to 3 hours, or off — and a 1 h response cache spares the other loads (cold start, place or model change) from repeating requests.
 * SI units only — °C, km/h, mm, km — refreshed every 900 s while the screen is visible, with an
@@ -42,7 +42,7 @@ standalone `sdkmanager` both work; no root access is needed.
 ```bash
 ./gradlew :app:assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew :app:assembleRelease        # app/build/outputs/apk/release/app-release.apk
-./gradlew :app:testDebugUnitTest      # 71 unit tests, no device required
+./gradlew :app:testDebugUnitTest      # 74 unit tests, no device required
 ```
 
 Release builds are minified with R8. Signing reads `keystore.properties` (never committed, see
@@ -143,7 +143,7 @@ returns it, which the 9 km IFS model never does. Fields the TUI fetched but neve
 
 ## Tests
 
-`./gradlew :app:testDebugUnitTest` — 71 tests in 13 classes, fully offline.
+`./gradlew :app:testDebugUnitTest` — 74 tests in 13 classes, fully offline.
 
 Behaviour covered: payload parsing and its tolerance paths (missing, short, non-numeric, boolean,
 numeric-string and null columns, unparsable timestamps), the request query and its clamping, error

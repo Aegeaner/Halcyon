@@ -1,10 +1,10 @@
-Hourly forecast as a chart, and the table it replaces one tap away.
+A readable hourly chart: every series now labels its own extremes.
 
-* Every 24-hour span now draws a meteogram: temperature as a line with its highs and lows labelled, precipitation as bars over a fainter precipitation-probability band, wind as a line with gusts dashed above it, and humidity as a thin line — all on one shared time axis.
-* Tapping a chart, or `Details`, opens that span's hourly table: time, weather, temperature, apparent temperature, precipitation, probability, wind, gusts and humidity.
-* The refresh timer is configurable now - 15 minutes by default, up to 3 hours, or off - and a forced refresh also refreshes the response cache instead of bypassing it entirely.
-* Current conditions, the 16-day list, device location and the city/coordinate fallback are unchanged.
+* Temperature carries its high and low, the precipitation band its tallest bar, the wind band its strongest wind and gust, and the humidity band its dampest and driest hour — all in real values rather than a single unexplained figure.
+* The precipitation and wind bands draw their zero line, and the humidity band no longer shows a fixed 0–100 scale that the curve did not follow.
+* The time axis ticks every three hours, the day boundary keeps the weekday, and each band's top edge is the ceiling of its own scale, so a labelled figure sits where its value is.
+* The band captions name both precipitation series, so the paler bars are recognisably the probability.
 
-**Install** — `adb install halcyon-0.2.0.apk`, or copy it to the device and open it. Requires Android 8.0 or later (minSdk 26).
+**Install** — `adb install halcyon-0.2.1.apk`, or copy it to the device and open it. Requires Android 8.0 or later (minSdk 26).
 
-Verified by 68 unit tests and on an API 36 emulator with an injected position. Requires no Google Play services.
+Verified by 74 unit tests and on an API 36 emulator with an injected position. Requires no Google Play services.

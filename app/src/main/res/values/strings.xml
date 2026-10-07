@@ -20,7 +20,7 @@
     <string name="chart_probability">Probability</string>
     <string name="chart_gusts">Gusts</string>
     <string name="chart_humidity">Humidity</string>
-    <string name="chart_peak">peak %1$s</string>
+    <string name="chart_percent">%1$s %%</string>
     <string name="chart_no_precipitation">no precipitation</string>
     <string name="daily_range">Daily — %1$d days</string>
     <string name="attribution">Data © ECMWF / Open-Meteo, CC-BY 4.0 · ECMWF IFS HRES (9 km, native)</string>

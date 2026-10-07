@@ -19,6 +19,13 @@ data class ChartBand(
         return ((value - min) / span).coerceIn(0.0, 1.0).toFloat()
     }
 
+
+    /** Index of the largest value, or null when the series is empty. Ties keep the earliest. */
+    fun peakIndex(): Int? = points.indices.filter { points[it] != null }.maxByOrNull { points[it]!! }
+
+    /** Index of the smallest value, or null when the series is empty. Ties keep the earliest. */
+    fun troughIndex(): Int? = points.indices.filter { points[it] != null }.minByOrNull { points[it]!! }
+
     companion object {
         /**
          * Scaled to the values themselves, for a line that fills its band. A constant series gets a
