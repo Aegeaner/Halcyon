@@ -1,0 +1,89 @@
+name: release
+
+# Pushing a v* tag (or running this manually) builds, signs and uploads a release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build, e.g. v0.1.1'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Pinned instead of ubuntu-latest: the SDK layout this job relies on is the one verified here,
+    # and a pinned image keeps the build reproducible. Bump when GitHub retires it.
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The runner image ships the Android SDK but does not put sdkmanager on PATH, and its
+      # cmdline-tools live in a versioned directory rather than .../latest.
+      - name: Install the SDK packages
+        run: |
+          sdkmanager="$(command -v sdkmanager || true)"
+          if [ -z "$sdkmanager" ]; then
+            sdkmanager="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | head -1)"
+          fi
+          echo "using $sdkmanager"
+          yes | "$sdkmanager" --licenses >/dev/null || true
+          "$sdkmanager" "platforms;android-37.2" "build-tools;36.0.0"
+
+      # Untracked locally, so CI writes it from repository secrets:
+      #   KEYSTORE_BASE64      base64 -w0 keystore/release.jks
+      #   KEYSTORE_PASSWORD    storePassword from keystore.properties
+      #   KEY_ALIAS            keyAlias from keystore.properties
+      #   KEY_PASSWORD         keyPassword from keystore.properties
+      - name: Write the signing material
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          mkdir -p keystore
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > keystore/release.jks
+          printf 'storeFile=keystore/release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+
+      - name: Read the version from the tag
+        id: version
+        run: echo "name=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Build
+        run: ./gradlew :app:assembleRelease -PversionName="${{ steps.version.outputs.name }}"
+
+      - name: Verify the signature and stage the asset
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk"
+          cp "$apk" "halcyon-${{ steps.version.outputs.name }}.apk"
+          sha256sum "halcyon-${{ steps.version.outputs.name }}.apk"
+
+      # Draft by default: review it, then publish with
+      #   gh release edit "$TAG" --draft=false
+      - name: Upload the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" "halcyon-${{ steps.version.outputs.name }}.apk" \
+            --title "Halcyon ${{ steps.version.outputs.name }}" \
+            --notes-file .github/release-notes.md \
+            --draft \
+          || gh release upload "$TAG" "halcyon-${{ steps.version.outputs.name }}.apk" --clobber

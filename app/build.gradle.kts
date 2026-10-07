@@ -26,7 +26,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        // CI passes the tag, e.g. -PversionName=0.1.1, so the APK matches its release.
+        versionName = (findProperty("versionName") as String?) ?: "0.1.0"
     }
 
     signingConfigs {
