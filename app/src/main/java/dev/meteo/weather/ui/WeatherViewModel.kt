@@ -77,11 +77,12 @@ class WeatherViewModel(
 
     // ------------------------------------------------------------------ data -- //
 
-    /** Manual refresh: bypasses the response cache, like pressing `r` in the terminal version. */
+    /**
+     * Fetch the latest forecast now: reads past the response cache, exactly like pressing `r` in
+     * the terminal version. Used by the toolbar and by the auto-refresh timer, whose interval the
+     * user chooses; the cache is left refreshed for the loads that do use it.
+     */
     fun refresh() = load(force = true)
-
-    /** Timer refresh: reuses the cache, like the terminal version's interval timer. */
-    fun refreshIfStale() = load(force = false)
 
     private fun load(force: Boolean) {
         val request = _state.value

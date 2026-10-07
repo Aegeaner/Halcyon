@@ -25,9 +25,10 @@ class ForecastRepository(
         place = place,
         days = MAX_FORECAST_DAYS,
         model = model,
-        // A forced refresh is exactly the terminal version's `--no-cache` path: skip the cache
-        // on read, but still store the fresh response for the next ordinary request.
-        cache = if (force) null else cache,
+        cache = cache,
+        // A forced refresh reads past the cache but still refreshes it, so later loads - a place
+        // change, a cold start - do not have to repeat the request.
+        force = force,
     )
 
     fun geocode(name: String): List<Place> = api.geocode(name)

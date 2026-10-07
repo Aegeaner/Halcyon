@@ -31,7 +31,10 @@ class OpenMeteoApiTest {
     }
 
     private fun serve(body: String, status: Int = 200): LocalHttpServer =
-        LocalHttpServer(body, status).also { servers += it }
+        LocalHttpServer(status).also {
+            it.body = body
+            servers += it
+        }
 
     private fun api(server: LocalHttpServer): OpenMeteoApi = OpenMeteoApi(
         client = client,
@@ -133,7 +136,9 @@ class OpenMeteoApiTest {
 
     @Test
     fun `serves a repeated request from the cache and bypasses it when forced`() {
-        val server = serve(SyntheticPayload.build().toString())
+        val first = SyntheticPayload.build(hours = 1, days = 1)
+        val second = SyntheticPayload.build(hours = 2, days = 1)
+        val server = serve(first.toString())
         val api = api(server)
         val cache = cache()
 
@@ -141,8 +146,13 @@ class OpenMeteoApiTest {
         api.fetchForecast(OSLO, cache = cache)
         assertEquals("second call must come from the cache", 1L, server.requestCount.toLong())
 
-        api.fetchForecast(OSLO, cache = null)
-        assertEquals("a forced refresh must hit the network", 2L, server.requestCount.toLong())
+        server.body = second.toString()
+        api.fetchForecast(OSLO, cache = cache, force = true)
+        assertEquals("a forced refresh must read past the cache", 2L, server.requestCount.toLong())
+
+        val stored = api.fetchForecast(OSLO, cache = cache)
+        assertEquals("a forced refresh must still store what it fetched", 2L, server.requestCount.toLong())
+        assertEquals("the stored response is the refreshed one", 2, stored.hours.size)
 
         // A different place is a different cache entry.
         api.fetchForecast(OSLO.copy(latitude = 51.8985, longitude = -8.4756), cache = cache)

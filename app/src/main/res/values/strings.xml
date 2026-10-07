@@ -41,6 +41,10 @@
 
     <!-- Settings -->
     <string name="model">Model</string>
+    <string name="auto_refresh">Auto-refresh</string>
+    <string name="refresh_off">Off</string>
+    <string name="refresh_every_minutes">Every %1$d min</string>
+    <string name="refresh_every_hours">Every %1$d h</string>
     <string name="place">Place</string>
     <string name="search_city">Search location</string>
     <string name="search_action">Search</string>

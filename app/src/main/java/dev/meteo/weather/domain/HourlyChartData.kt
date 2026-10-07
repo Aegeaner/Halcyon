@@ -11,9 +11,6 @@ object HourlyChartData {
     fun precipitationProbability(hours: List<Hour>): ChartBand =
         ChartBand.capped(hours.map { it.precipitationProbability }, ceiling = 100.0)
 
-    fun wind(hours: List<Hour>): ChartBand =
-        ChartBand.zeroBased(hours.map { it.windSpeed })
-
     /** Gusts share the wind band, so both lines are comparable. */
     fun gusts(hours: List<Hour>, band: ChartBand): List<Double?> =
         hours.map { it.windGusts?.coerceAtLeast(band.min) }

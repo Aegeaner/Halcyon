@@ -1,11 +1,14 @@
 package dev.meteo.weather.data
 
 /**
- * How often the screen refreshes itself while it is visible.
+ * How often the visible screen asks Open-Meteo for a fresh forecast.
  *
- * A timer refresh reuses the response cache, whose TTL is an hour, so the network is hit at most
- * once per hour whatever the interval; these choices trade freshness of the on-screen clock for
- * requests, and `OFF` stops the timer altogether. Manual refreshes always bypass the cache.
+ * Open-Meteo is open source, needs no API key for non-commercial use, and its free tier allows on
+ * the order of 10,000 requests a day; even the shortest option here is 96 a day. The forecast
+ * itself is what limits the useful cadence: ECMWF reruns the model a few times a day, so polling
+ * faster mostly re-reads the same numbers, and the response cache keeps the other loads - a cold
+ * start, a place or model change - from repeating requests. `OFF` stops the timer; the toolbar's
+ * refresh always goes to the network.
  */
 enum class RefreshInterval(val seconds: Int) {
     OFF(0),

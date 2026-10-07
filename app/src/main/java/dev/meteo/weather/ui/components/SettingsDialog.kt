@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.meteo.weather.R
 import dev.meteo.weather.data.MODEL_LABELS
+import dev.meteo.weather.data.RefreshInterval
 import dev.meteo.weather.data.model.Place
 import dev.meteo.weather.domain.Fmt
 import dev.meteo.weather.ui.CoordinateError
@@ -39,6 +40,7 @@ import dev.meteo.weather.ui.UiState
 fun SettingsDialog(
     state: UiState,
     onModelChange: (String) -> Unit,
+    onRefreshIntervalChange: (RefreshInterval) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onPlaceSelected: (Place) -> Unit,
@@ -159,6 +161,15 @@ fun SettingsDialog(
                     }
                 }
 
+                SectionTitle(stringResource(R.string.auto_refresh))
+                RefreshInterval.entries.forEach { interval ->
+                    ChoiceRow(
+                        label = intervalLabel(interval),
+                        selected = interval == state.refreshInterval,
+                        onClick = { onRefreshIntervalChange(interval) },
+                    )
+                }
+
                 SectionTitle(stringResource(R.string.model))
                 MODEL_LABELS.forEach { (id, label) ->
                     ChoiceRow(
@@ -198,4 +209,13 @@ private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
         RadioButton(selected = selected, onClick = onClick)
         Text(text = label, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+@Composable
+private fun intervalLabel(interval: RefreshInterval): String = when (interval) {
+    RefreshInterval.OFF -> stringResource(R.string.refresh_off)
+    RefreshInterval.FIFTEEN_MINUTES -> stringResource(R.string.refresh_every_minutes, 15)
+    RefreshInterval.THIRTY_MINUTES -> stringResource(R.string.refresh_every_minutes, 30)
+    RefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hours, 1)
+    RefreshInterval.THREE_HOURLY -> stringResource(R.string.refresh_every_hours, 3)
 }

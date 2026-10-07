@@ -6,8 +6,9 @@ Kotlin/Jetpack Compose client for the [Open-Meteo](https://open-meteo.com/) fore
 **ECMWF IFS HRES** model at its native ~9 km resolution. A port of the terminal `weather-tui`
 project, with device location in place of a `--lat/--lon` flag.
 
-Data © ECMWF / Open-Meteo, [CC-BY 4.0](https://open-meteo.com/en/license). Independent client, not
-affiliated with Open-Meteo.
+Data © ECMWF / Open-Meteo, [CC-BY 4.0](https://open-meteo.com/en/license). Open-Meteo is open
+source and needs no API key; the free tier allows on the order of 10,000 requests a day, which this
+app stays far below. Independent client, not affiliated with Open-Meteo.
 
 ## Screenshots
 
@@ -28,6 +29,7 @@ affiliated with Open-Meteo.
   visibility, sunrise and sunset.
 * **Hourly**: a chart for each of the next three 24-hour spans (`1–24 h`, `25–48 h`, `49–72 h`) — temperature, precipitation, wind and humidity on one shared time axis, with the table behind each chart one tap away.
 * **Daily**: the next 16 days.
+* **Refresh**: a timer fetches a fresh response every 15 minutes by default — configurable from 15 minutes to 3 hours, or off — and a 1 h response cache spares the other loads (cold start, place or model change) from repeating requests.
 * SI units only — °C, km/h, mm, km — refreshed every 900 s while the screen is visible, with an
   on-disk response cache (1 h TTL).
 
@@ -40,7 +42,7 @@ standalone `sdkmanager` both work; no root access is needed.
 ```bash
 ./gradlew :app:assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew :app:assembleRelease        # app/build/outputs/apk/release/app-release.apk
-./gradlew :app:testDebugUnitTest      # 68 unit tests, no device required
+./gradlew :app:testDebugUnitTest      # 71 unit tests, no device required
 ```
 
 Release builds are minified with R8. Signing reads `keystore.properties` (never committed, see
@@ -88,8 +90,10 @@ app/src/main/java/dev/meteo/weather/
 │   ├── ForecastParser.kt     tolerant payload parsing               ← api.py parsing
 │   ├── ResponseCache.kt      JSON-on-disk TTL cache                 ← api.py ResponseCache
 │   ├── ForecastRepository.kt horizon and cache policy
-│   └── SettingsStore.kt      model id, last place
-├── domain/                   Wmo, Formatters, Si, HourlyPages       ← wmo.py + render.py, pure
+│   ├── RefreshInterval.kt    auto-refresh choices
+│   └── SettingsStore.kt      model id, refresh interval, last place
+├── domain/                   Wmo, Formatters, Si, HourlyPages, ChartBand,
+│                             HourlyChartData, CoordinateInput       ← wmo.py + render.py, pure
 ├── location/                 LocationProvider, LocationFix, Permissions
 └── ui/                       WeatherScreen, WeatherViewModel, UiState, components/
 ```
@@ -123,7 +127,7 @@ coordinates rounded to six decimals, the same 17 hourly and 17 daily variables.
 | `--days 1..16` | fixed 16 days; the hourly section covers the first 72 h |
 | `--hourly-rows 24` | three charted pages of 24 h |
 | `--units` / `u` | dropped: SI only, so there is no unit-system abstraction |
-| `--refresh 900` / `r` | 900 s timer while visible, plus an explicit refresh |
+| `--refresh 900` / `r` | 900 s timer by default, configurable (15 min–3 h or off), plus an explicit refresh |
 | `--cache-ttl 3600` / `--no-cache` | 1 h TTL; a refresh bypasses it on read |
 | `q` | system back gesture |
 | Now panel | `Now` card, field for field |
@@ -139,7 +143,7 @@ returns it, which the 9 km IFS model never does. Fields the TUI fetched but neve
 
 ## Tests
 
-`./gradlew :app:testDebugUnitTest` — 68 tests in 12 classes, fully offline.
+`./gradlew :app:testDebugUnitTest` — 71 tests in 13 classes, fully offline.
 
 Behaviour covered: payload parsing and its tolerance paths (missing, short, non-numeric, boolean,
 numeric-string and null columns, unparsable timestamps), the request query and its clamping, error

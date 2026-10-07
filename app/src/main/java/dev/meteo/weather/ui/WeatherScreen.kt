@@ -45,6 +45,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.meteo.weather.R
 import dev.meteo.weather.data.MODEL_LABELS
+import dev.meteo.weather.data.RefreshInterval
 import dev.meteo.weather.data.model.Forecast
 import dev.meteo.weather.domain.Fmt
 import dev.meteo.weather.domain.HourlyPages
@@ -60,9 +61,6 @@ import dev.meteo.weather.ui.components.HourlyHeader
 import dev.meteo.weather.ui.components.SettingsDialog
 import dev.meteo.weather.ui.components.StatusCard
 import kotlinx.coroutines.delay
-
-/** The terminal version's `--refresh` default. */
-private const val REFRESH_INTERVAL_MILLIS = 900_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,13 +95,17 @@ fun WeatherScreen(
         if (viewModel.shouldUseDeviceLocation) requestDeviceLocation()
     }
 
-    // Refresh on a timer while the screen is visible; the cache is reused, like the terminal timer.
+    // While the screen is visible the timer fetches a fresh response every chosen interval, so the
+    // setting means what it says; the cache below it only spares repeated requests from cold
+    // starts, place changes and other loads.
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner) {
+    val refreshInterval = state.refreshInterval
+    LaunchedEffect(lifecycleOwner, refreshInterval) {
+        if (refreshInterval == RefreshInterval.OFF) return@LaunchedEffect
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                delay(REFRESH_INTERVAL_MILLIS)
-                viewModel.refreshIfStale()
+                delay(refreshInterval.millis)
+                viewModel.refresh()
             }
         }
     }
@@ -215,6 +217,7 @@ fun WeatherScreen(
         SettingsDialog(
             state = state,
             onModelChange = viewModel::setModel,
+            onRefreshIntervalChange = viewModel::setRefreshInterval,
             onSearchQueryChange = viewModel::onSearchQueryChanged,
             onSearch = viewModel::search,
             onPlaceSelected = viewModel::selectPlace,

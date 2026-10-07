@@ -6,9 +6,12 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /** Minimal local HTTP server; lets the Open-Meteo client be tested without the network. */
 class LocalHttpServer(
-    private val body: String,
     private val status: Int = 200,
 ) : AutoCloseable {
+
+    /** Mutable so a test can observe that a stored response was replaced. */
+    var body: String = ""
+
 
     private val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
 

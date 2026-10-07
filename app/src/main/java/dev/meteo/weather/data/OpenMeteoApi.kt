@@ -36,6 +36,7 @@ class OpenMeteoApi(
         days: Int = MAX_FORECAST_DAYS,
         model: String = DEFAULT_MODEL,
         cache: ResponseCache? = null,
+        force: Boolean = false,
     ): Forecast {
         val params = linkedMapOf<String, Any>(
             "latitude" to round6(place.latitude),
@@ -47,7 +48,7 @@ class OpenMeteoApi(
             // The app runs at the requested point, so `auto` always returns local wall-clock times.
             "timezone" to TIMEZONE,
         )
-        val payload = requestJson(forecastUrl, params, cache)
+        val payload = requestJson(forecastUrl, params, cache, useCache = !force)
         return ForecastParser.parse(place, payload, model = model)
     }
 
@@ -74,9 +75,18 @@ class OpenMeteoApi(
         }
     }
 
-    private fun requestJson(url: String, params: Map<String, Any>, cache: ResponseCache?): JsonObject {
+    /**
+     * [useCache] false reads past the cache - a forced refresh - but the response is still stored,
+     * so the next ordinary load does not have to repeat the request.
+     */
+    private fun requestJson(
+        url: String,
+        params: Map<String, Any>,
+        cache: ResponseCache?,
+        useCache: Boolean = true,
+    ): JsonObject {
         val key = if (cache != null) ResponseCache.makeKey(url, params) else ""
-        if (cache != null) cache.get(key)?.let { return it }
+        if (cache != null && useCache) cache.get(key)?.let { return it }
 
         val request = Request.Builder()
             .url(buildUrl(url, params))
